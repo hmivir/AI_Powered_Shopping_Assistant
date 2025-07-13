@@ -37,14 +37,16 @@ This project was developed as the final assignment for the specialization **"Bui
 | Testing                 | Pytest                                      |
 | Code Style              | Black (PEP-8 formatting)                    |
 
-<pre markdown="1"> ``` ## 📁 Project Structure 
+<pre markdown="1"> ``` 
+    ## 📁 Project Structure 
     ├── src/ # Core logic (tools, agents, prompts, graph, state)
     ├── tests/ # Unit and integration tests
     ├── dataset/ # Product catalog and historical order data
     ├── app.py # Streamlit web interface
     ├── download_dataset.py # Script to download and extract dataset
     ├── requirements.txt # Python dependencies
-    └── README.md # This file ``` </pre>
+    └── README.md # This file
+    ``` </pre>
 
 ## 🔧 Installation
 
