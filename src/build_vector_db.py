@@ -71,7 +71,7 @@ def build_and_persist_chroma(docs, persist_directory=CHROMA_DIR, batch_size=256)
 
     embeddings = HuggingFaceEmbeddings(
         model_name="mixedbread-ai/mxbai-embed-large-v1",
-        model_kwargs={"device": "cpu"},
+        model_kwargs={"device": "cuda"},
         encode_kwargs={"normalize_embeddings": True},
     )
 

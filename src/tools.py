@@ -46,7 +46,20 @@ VALID_USER_IDS = sorted(orders["user_id"].dropna().unique().tolist())
 # Pick the first user for simplicity and safety
 DEFAULT_USER_ID = VALID_USER_IDS[0]
 
-# TODO
+# TODO Done
+
+# Filter out invalid 'aisle_id' values: keep only rows where the ID is numeric
+# Some rows had text or malformed values instead of integers
+products = products[products["aisle_id"].apply(lambda x: str(x).isdigit())].copy()
+products["aisle_id"] = products["aisle_id"].astype(int)
+# Filter out invalid 'department_id' values: same issue as 'aisle_id'
+# This ensures that we can safely join with the departments table
+products = products[products["department_id"].apply(lambda x: str(x).isdigit())]
+products["department_id"] = products["department_id"].astype(int)
+# Ensure 'aisles' and 'departments' have the correct types for merging
+aisles["aisle_id"] = aisles["aisle_id"].astype(int)
+departments["department_id"] = departments["department_id"].astype(int)
+
 @tool
 def structured_search_tool(
     product_name: Optional[str] = None,
@@ -179,10 +192,66 @@ def structured_search_tool(
     LLM Usage Note:
     This tool is ideal for filtered browsing, purchase history analysis, or category breakdowns.
     """
-    pass
+    global products, departments, aisles, prior, orders
+    df = products.merge(aisles, on="aisle_id", how="left").merge(departments, on="department_id", how="left")
+
+    if history_only:
+      user_id = get_user_id()
+      if user_id is None:
+        return[{"Error": "User ID is not in history_only = True"}]
+    
+      #Previus order 
+      user_orders = orders[(orders["user_id"] == user_id) & (orders["eval_set"] == "prior")]
+      # products purchased with those orders
+      user_prior = prior.merge(user_orders, on="order_id", how="inner")
+      # join 
+      user_df = user_prior.merge(df, on="product_id", how="left")
+      agg_df = user_df.groupby(
+              ["product_id", "product_name", "aisle", "department"], as_index=False
+      ).agg(
+            count=pd.NamedAgg(column="order_id", aggfunc="count"),
+            reordered=pd.NamedAgg(column="reordered", aggfunc="sum"),
+            add_to_cart_order=pd.NamedAgg(column="add_to_cart_order", aggfunc="mean"),
+      )
+        # Aplicar filtros sobre agg_df
+      if product_name:
+          agg_df = agg_df[agg_df["product_name"].str.contains(product_name, case=False, na=False)]
+      if department:
+          agg_df = agg_df[agg_df["department"].str.lower() == department.lower()]
+      if aisle:
+          agg_df = agg_df[agg_df["aisle"].str.lower() == aisle.lower()]
+      if reordered is not None:
+          if reordered:
+              agg_df = agg_df[agg_df["reordered"] > 0]
+          else:
+              agg_df = agg_df[agg_df["reordered"] == 0]
+      if min_orders:
+          agg_df = agg_df[agg_df["count"] >= min_orders]
+
+      if order_by in ["count", "add_to_cart_order"]:
+          agg_df = agg_df.sort_values(order_by, ascending=ascending)
+
+      if top_k:
+          agg_df = agg_df.head(top_k)
+
+      return agg_df.to_dict(orient="records")
+    else:
+      df_filtered = df.copy()
+
+      if product_name:
+          df_filtered = df_filtered[df_filtered["product_name"].str.contains(product_name, case=False, na=False)]
+      if department:
+          df_filtered = df_filtered[df_filtered["department"].str.lower() == department.lower()]
+      if aisle:
+          df_filtered = df_filtered[df_filtered["aisle"].str.lower() == aisle.lower()]
+
+      if top_k:
+          df_filtered = df_filtered.head(top_k)
+
+      return df_filtered.to_dict(orient="records")
 
 
-# TODO
+# TODO done
 class RouteToCustomerSupport(BaseModel):
     """
     Pydantic schema for the assistant tool that triggers routing to customer support.
@@ -233,15 +302,26 @@ _embeddings = None
 _vector_store = None
 
 
-def get_vector_store():
-    pass
+def get_vector_store(): #done
+    persist_directory = "./vector_db"
+    collection_name = "product_catalog"
+    embeddings = HuggingFaceEmbeddings(
+        model_name="mixedbread-ai/mxbai-embed-large-v1",
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
+    )
+    vector_store = Chroma(
+        collection_name=collection_name,
+        embedding_function=embeddings,
+        persist_directory=persist_directory,
+    )
+    return vector_store
 
-
-def make_query_prompt(query: str) -> str:
+def make_query_prompt(query: str) -> str: #done
     return f"Represent this sentence for searching relevant passages: {query.strip().replace(chr(10), ' ')}"
 
 
-# TODO
+# TODO Done
 def search_products(query: str, top_k: int = 5):
     """
     Perform a semantic vector search over the product catalog using HuggingFace embeddings and Chroma.
@@ -284,10 +364,26 @@ def search_products(query: str, top_k: int = 5):
     ]
     ```
     """
-    pass
+    query_text = make_query_prompt(query)
+    vector_store = get_vector_store()
+    docs = vector_store.similarity_search(query_text, k=top_k)
+
+    products = []
+    for doc in docs:
+      metadata = doc.metadata
+      product = {
+            "product_id": metadata.get("product_id"),
+            "product_name": metadata.get("product_name"),
+            "aisle": metadata.get("aisle"),
+            "department": metadata.get("department"),
+            "text": doc.page_content,
+      }
+      products.append(product)
+    return products
+  
 
 
-# TODO
+# TODO done
 @tool
 def search_tool(query: str) -> str:
     """
@@ -343,7 +439,23 @@ def search_tool(query: str) -> str:
     search_tool("something high protein for breakfast")
     ```
     """
-    pass
+    results = search_products(query)
+    #print("DEBUG: results =", results)
+
+    if not results:
+      return "No products found"
+    
+    #build the response
+    response = ""
+    for product in results:
+        response += (
+            f"- {product['product_name']} (ID: {product['product_id']})\n"
+            f"  Aisle: {product['aisle']}\n"
+            f"  Department: {product['department']}\n"
+            f"  Details: {product['text']}\n\n"
+    )
+    return response.strip()    
+   
 
 
 # ---- UPDATED: Cart tools with quantity support ----
@@ -470,9 +582,9 @@ def handle_tool_error(state: Dict[str, Any]) -> dict:
             for tc in tool_calls
         ]
     }
+handle_tool_error_runnable = RunnableLambda(handle_tool_error)
 
-
-# TODO
+# TODO done
 def create_tool_node_with_fallback(tools: list) -> ToolNode:
     """
     Build a LangGraph ToolNode that can handle errors gracefully using a fallback strategy.
@@ -495,7 +607,10 @@ def create_tool_node_with_fallback(tools: list) -> ToolNode:
     Returns:
     - ToolNode: A LangGraph-compatible tool node with error fallback logic.
     """
-    pass
+    return ToolNode(tools).with_fallbacks(
+      [handle_tool_error_runnable], # fallback function(s)
+      exception_key="error" # field used to store exceptions
+    )
 
 
 __all__ = [

@@ -4,7 +4,8 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from langchain_core.runnables import RunnableConfig
-from langchain_openai import ChatOpenAI
+#from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from .prompts import sales_rep_prompt, support_prompt
 from .state import State
@@ -24,8 +25,16 @@ load_dotenv()
 import pandas as pd
 
 # Setup LLM
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") or "Empty"
-llm = ChatOpenAI(api_key=OPENAI_API_KEY)
+# OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") or "Empty"
+# llm = ChatOpenAI(api_key=OPENAI_API_KEY)
+
+# Setup LLM (Gemini)
+
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+llm = ChatGoogleGenerativeAI(
+    model="gemini-1.5-pro-latest", 
+    google_api_key=GOOGLE_API_KEY
+)
 
 # Tool registration
 sales_tools = [
@@ -45,7 +54,7 @@ support_runnable = support_prompt.partial(time=datetime.now) | llm.bind_tools(
     support_tools
 )
 
-# TODO
+# TODO done
 def sales_assistant(state: State, config: RunnableConfig, runnable=sales_runnable) -> dict:
     """
     LangGraph node function for running the sales assistant LLM agent.
@@ -71,7 +80,12 @@ def sales_assistant(state: State, config: RunnableConfig, runnable=sales_runnabl
     - A dictionary with a `"messages"` key containing the new AI message(s).
     Example: `{"messages": [AIMessage(...)]}`
     """
-    pass
+    set_thread_id(config["configurable"]["thread_id"])
+    set_user_id(DEFAULT_USER_ID)
+
+    #run the assistant logic
+    response = runnable.invoke(state, config=config)
+    return {"messages" : response}
 
 
 def support_assistant(state: State, config: RunnableConfig) -> dict:

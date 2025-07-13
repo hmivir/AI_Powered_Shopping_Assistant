@@ -1,0 +1,37 @@
+# 🌱 Environment variables
+.env
+
+# 🐍 Python virtual environments (ambos estilos)
+venv/
+
+# 📦 Dataset y datos generados
+dataset/
+dataset/*.zip
+dataset/.DS_Store
+dataset/Thumbs.db
+
+# 📊 Vector database
+vector_db/
+
+# ⚙️ Python build y cachés
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 📝 Logs y archivos del sistema
+*.log
+.DS_Store
+Thumbs.db
+
+# 📓 Jupyter notebooks y checkpoints
+.ipynb_checkpoints/
+
+# 🧪 Pytest cache
+.pytest_cache/
+
+# 🗃️ Archivos antiguos o no deseados
+README_.md
+=0.6.18
+
+#tmp_dataset
+tmp_dataset.zip

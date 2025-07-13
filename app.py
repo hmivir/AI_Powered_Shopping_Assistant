@@ -675,15 +675,15 @@ with st.sidebar:
     st.divider()
 
     # Session Info
-    st.markdown("""<div class="sidebar-section">""", unsafe_allow_html=True)
-    st.markdown("### Session Info")
-    st.markdown(f"**Thread ID:** {st.session_state.thread_id}")
-    st.markdown(
-        f"**Current Mode:** {st.session_state.current_mode.upper().replace('_', ' ')}"
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
+    # st.markdown("""<div class="sidebar-section">""", unsafe_allow_html=True)
+    # st.markdown("### Session Info")
+    # st.markdown(f"**Thread ID:** {st.session_state.thread_id}")
+    # st.markdown(
+    #     f"**Current Mode:** {st.session_state.current_mode.upper().replace('_', ' ')}"
+    # )
+    # st.markdown("</div>", unsafe_allow_html=True)
 
-    st.divider()
+    # st.divider()
 
     col1, col2 = st.columns(2)
     with col1:
@@ -735,7 +735,50 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Display chat messages
+# Display chat messages (ORIGINAL)
+# chat_container = st.container()
+# with chat_container:
+#     for msg in st.session_state.chat_history:
+#         role = msg["role"]
+#         content = msg["content"]
+
+#         if role == "user":
+#             st.markdown(
+#                 f'<div class="user-bubble"><strong>You:</strong><br>{content}</div>',
+#                 unsafe_allow_html=True,
+#             )
+
+#         elif role == "assistant":
+#             mode = msg.get("mode", "assistant").upper().replace("_", " ")
+#             st.markdown(
+#                 f'<div class="assistant-bubble"><strong>{mode}:</strong><br>{content}</div>',
+#                 unsafe_allow_html=True,
+#             )
+
+#         elif role == "tool_call":
+#             tool_name = msg.get("tool_name", "TOOL")
+#             st.markdown(
+#                 f'<div class="tool-bubble"><strong>🔧 CALLING {tool_name}:</strong><br>{content}</div>',
+#                 unsafe_allow_html=True,
+#             )
+
+#         elif role == "tool_result":
+#             tool_name = msg.get("tool_name", "TOOL")
+#             st.markdown(
+#                 f'<div class="tool-bubble"><strong>🔧 {tool_name} RESULT:</strong><br>{content}</div>',
+#                 unsafe_allow_html=True,
+#             )
+
+#         elif role == "supervisor":
+#             st.markdown(
+#                 f'<div class="supervisor-bubble"><strong>👨‍💼 SUPERVISOR:</strong><br>{content}</div>',
+#                 unsafe_allow_html=True,
+#             )
+
+#         elif role == "error":
+#             st.error(content)
+
+# Display chat messages (Cambiado para no mostrar el log)
 chat_container = st.container()
 with chat_container:
     for msg in st.session_state.chat_history:
@@ -750,19 +793,20 @@ with chat_container:
 
         elif role == "assistant":
             mode = msg.get("mode", "assistant").upper().replace("_", " ")
+            formatted_content = content.replace("\n", "<br>")
             st.markdown(
-                f'<div class="assistant-bubble"><strong>{mode}:</strong><br>{content}</div>',
+                f'<div class="assistant-bubble"><strong>{mode}:</strong><br>{formatted_content}</div>',
                 unsafe_allow_html=True,
             )
 
-        elif role == "tool_call":
+        elif role == "tool_call" and st.session_state.debug_mode:
             tool_name = msg.get("tool_name", "TOOL")
             st.markdown(
                 f'<div class="tool-bubble"><strong>🔧 CALLING {tool_name}:</strong><br>{content}</div>',
                 unsafe_allow_html=True,
             )
 
-        elif role == "tool_result":
+        elif role == "tool_result" and st.session_state.debug_mode:
             tool_name = msg.get("tool_name", "TOOL")
             st.markdown(
                 f'<div class="tool-bubble"><strong>🔧 {tool_name} RESULT:</strong><br>{content}</div>',
@@ -777,6 +821,7 @@ with chat_container:
 
         elif role == "error":
             st.error(content)
+
 
 # Approval interface (shows up when approval is needed)
 if st.session_state.pending_approval:
