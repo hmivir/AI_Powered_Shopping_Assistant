@@ -1,35 +1,34 @@
-# 🌱 Environment variables
+# Environment variables
 .env
 
-# 🐍 Python virtual environments (ambos estilos)
+#  Python virtual environments
 venv/
 
-# 📦 Dataset y datos generados
-dataset/
+# Dataset
 dataset/*.zip
 dataset/.DS_Store
 dataset/Thumbs.db
 
-# 📊 Vector database
+# Vector database
 vector_db/
 
-# ⚙️ Python build y cachés
+# Python build and caches
 __pycache__/
 *.py[cod]
 *.egg-info/
 
-# 📝 Logs y archivos del sistema
+# Logs y archivos del sistema
 *.log
 .DS_Store
 Thumbs.db
 
-# 📓 Jupyter notebooks y checkpoints
+# Jupyter notebooks and checkpoints
 .ipynb_checkpoints/
 
-# 🧪 Pytest cache
+# Pytest cache
 .pytest_cache/
 
-# 🗃️ Archivos antiguos o no deseados
+
 README_.md
 =0.6.18
 
